@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>My Dashboard</title>
+<style>
+  :root {
+    --bg: #f4f5f8; --surface: #ffffff; --surface-2: #eef0f4; --text: #1b1e24; --muted: #687080;
+    --border: #e1e4ea; --accent: #4f6bed; --accent-text: #ffffff; --danger: #d64545;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 12px rgba(16,24,40,.06);
+    --shadow-hover: 0 2px 4px rgba(16,24,40,.08), 0 10px 24px rgba(16,24,40,.10);
+    --radius: 16px; --bar-h: 76px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111318; --surface: #1b1e25; --surface-2: #252932; --text: #e8eaef; --muted: #9aa1ae;
+      --border: #2c313b; --accent: #7b91ff; --accent-text: #0d1020; --danger: #ff6b6b;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.3);
+      --shadow-hover: 0 2px 4px rgba(0,0,0,.5), 0 10px 24px rgba(0,0,0,.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  [hidden] { display: none !important; }
+
+  main { min-height: 100%; padding: 32px 20px calc(var(--bar-h) + 32px); }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  /* Dashboard */
+  .dash-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+  .dash-header h1 { font-size: 1.6rem; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  .dash-header .date { color: var(--muted); font-size: .95rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+  .tile { position: relative; }
+  .tile-link, .tile-add {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    height: 140px; padding: 16px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); text-decoration: none; color: var(--text);
+    transition: transform .15s ease, box-shadow .15s ease; text-align: center; width: 100%;
+  }
+  .tile-link:hover, .tile-add:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .tile-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); overflow: hidden; flex-shrink: 0; }
+  .tile-icon img { width: 32px; height: 32px; }
+  .tile-icon .letter { font-weight: 700; font-size: 1.25rem; color: #fff; width: 100%; height: 100%; display: grid; place-items: center; }
+  .tile-name { font-weight: 600; font-size: .98rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-domain { color: var(--muted); font-size: .8rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -8px; }
+  .tile-add { border-style: dashed; background: transparent; box-shadow: none; cursor: pointer; font: inherit; color: var(--muted); }
+  .tile-add .plus { font-size: 2rem; line-height: 1; }
+  .tile-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s ease; }
+  .tile:hover .tile-actions, .tile:focus-within .tile-actions { opacity: 1; }
+  @media (hover: none) { .tile-actions { opacity: 1; } }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); cursor: pointer; display: grid; place-items: center; font-size: .9rem; padding: 0;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--surface-2); }
+  .icon-btn.danger:hover { color: var(--danger); }
+  .empty-note { color: var(--muted); margin-top: 16px; }
+
+  /* Results */
+  .results-header { margin-bottom: 20px; }
+  .results-header h1 { margin: 0 0 4px; font-size: 1.5rem; font-weight: 650; }
+  .results-header p { margin: 0; color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 1.15rem; }
+  .card h3 { margin: 0 0 12px; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .abstract { display: flex; gap: 20px; align-items: flex-start; }
+  .abstract img { max-width: 140px; max-height: 140px; border-radius: 12px; object-fit: contain; background: var(--surface-2); flex-shrink: 0; }
+  @media (max-width: 560px) { .abstract { flex-direction: column; } }
+  .source { font-size: .9rem; color: var(--muted); margin-top: 8px; }
+  .result-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .result-item { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .result-item a { font-weight: 600; text-decoration: none; word-break: break-word; }
+  .result-item a:hover { text-decoration: underline; }
+  .result-item .url { font-size: .8rem; color: var(--muted); word-break: break-all; }
+  .result-item p { margin: 4px 0 0; }
+  .group-title { margin: 16px 0 8px; font-weight: 600; color: var(--muted); font-size: .9rem; }
+  .state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 16px; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { color: var(--danger); }
+
+  /* Bottom bar */
+  .bottom-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; height: var(--bar-h);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bar-inner { max-width: 760px; margin: 0 auto; width: 100%; display: flex; gap: 10px; align-items: center; }
+  .home-btn {
+    flex-shrink: 0; height: 46px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .home-btn:hover { background: var(--surface-2); }
+  .home-btn[aria-pressed="true"] { color: var(--accent); }
+  .search-form { flex: 1; display: flex; gap: 8px; }
+  .search-input {
+    flex: 1; min-width: 0; height: 46px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font: inherit; font-size: 1rem;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .btn {
+    height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent; font: inherit; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-text);
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn.secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .btn.danger { background: var(--danger); color: #fff; }
+  @media (max-width: 480px) { .home-btn .label, .search-btn .label { display: none; } .search-btn { padding: 0 14px; } }
+
+  /* Modal */
+  dialog {
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 0; background: var(--surface); color: var(--text);
+    box-shadow: var(--shadow-hover); width: min(440px, calc(100vw - 32px));
+  }
+  dialog::backdrop { background: rgba(10,12,18,.45); backdrop-filter: blur(2px); }
+  .modal-body { padding: 24px; }
+  .modal-body h2 { margin: 0 0 16px; font-size: 1.2rem; }
+  .field { display: grid; gap: 6px; margin-bottom: 14px; }
+  .field label { font-weight: 600; font-size: .9rem; }
+  .field input {
+    height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text); font: inherit;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .field-error { color: var(--danger); font-size: .85rem; min-height: 1.2em; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <section id="dashboardView" class="wrap" aria-labelledby="dashTitle">
+    <div class="dash-header">
+      <h1 id="dashTitle">My Dashboard</h1>
+      <span class="date" id="today"></span>
+    </div>
+    <ul class="grid" id="tileGrid" aria-label="Shortcuts"></ul>
+  </section>
+
+  <section id="resultsView" class="wrap" hidden aria-live="polite" aria-labelledby="resultsTitle">
+    <div class="results-header">
+      <h1 id="resultsTitle">Results</h1>
+      <p id="resultsSub"></p>
+    </div>
+    <div id="resultsPanel"></div>
+  </section>
+</main>
+
+<nav class="bottom-bar" aria-label="Search and navigation">
+  <div class="bar-inner">
+    <button type="button" class="home-btn" id="homeBtn" aria-label="Home: back to dashboard" aria-pressed="true">
+      <span aria-hidden="true">⌂</span><span class="label">Home</span>
+    </button>
+    <form class="search-form" id="searchForm" role="search">
+      <label for="searchInput" class="sr-only">Search</label>
+      <input id="searchInput" class="search-input" type="search" placeholder="Search DuckDuckGo instant answers…" autocomplete="off" enterkeyhint="search">
+      <button type="submit" class="btn search-btn" aria-label="Search"><span aria-hidden="true">⌕</span> <span class="label">Search</span></button>
+    </form>
+  </div>
+</nav>
+
+<dialog id="tileDialog" aria-labelledby="tileDialogTitle">
+  <form method="dialog" class="modal-body" id="tileForm" novalidate>
+    <h2 id="tileDialogTitle">Add shortcut</h2>
+    <div class="field">
+      <label for="tileName">Name</label>
+      <input id="tileName" name="name" maxlength="60" required autocomplete="off">
+      <span class="field-error" id="nameError" aria-live="polite"></span>
+    </div>
+    <div class="field">
+      <label for="tileUrl">URL</label>
+      <input id="tileUrl" name="url" inputmode="url" placeholder="example.com" required autocomplete="off">
+      <span class="field-error" id="urlError" aria-live="polite"></span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" id="tileCancel">Cancel</button>
+      <button type="submit" class="btn" id="tileSave">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirmDialog" aria-labelledby="confirmTitle">
+  <div class="modal-body">
+    <h2 id="confirmTitle">Remove shortcut?</h2>
+    <p id="confirmText"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" id="confirmCancel">Cancel</button>
+      <button type="button" class="btn danger" id="confirmOk">Remove</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'personalDashboard.tiles.v1';
+  var DDG_ENDPOINT = 'https://api.duckduckgo.com/';
+  var DDG_TIMEOUT_MS = 10000;
+  var DEFAULT_TILES = [
+    { name: 'Gmail', url: 'https://mail.google.com/' },
+    { name: 'YouTube', url: 'https://www.youtube.com/' },
+    { name: 'Wikipedia', url: 'https://www.wikipedia.org/' },
+    { name: 'GitHub', url: 'https://github.com/' },
+    { name: 'Google Calendar', url: 'https://calendar.google.com/' },
+    { name: 'Weather', url: 'https://weather.com/' }
+  ];
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        var v = attrs[k];
+        if (v == null || v === false) return;
+        if (k === 'text') node.textContent = String(v);
+        else if (k === 'className') node.className = v;
+        else if (k.slice(0, 2) === 'on' && typeof v === 'function') node.addEventListener(k.slice(2), v);
+        else node.setAttribute(k, v === true ? '' : String(v));
+      });
+    }
+    (children || []).forEach(function (c) {
+      if (c == null) return;
+      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return node;
+  }
+  function uid() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // Only allow http(s) URLs (blocks javascript:, data:, etc.)
+  function safeHttpUrl(raw) {
+    if (typeof raw !== 'string' || !raw) return null;
+    try {
+      var u = new URL(raw, 'https://duckduckgo.com');
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+    } catch (e) { return null; }
+  }
+  function normalizeUserUrl(raw) {
+    var s = (raw || '').trim();
+    if (!s) return null;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = 'https://' + s.replace(/^\/+/, '');
+    try {
+      var u = new URL(s);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+      var host = u.hostname;
+      if (!host || /\s/.test(s)) return null;
+      if (host !== 'localhost' && host.indexOf('.') === -1 && !/^\[.*\]$/.test(host)) return null;
+      return u.href;
+    } catch (e) { return null; }
+  }
+  function domainOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+  }
+  function colorFor(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+    return 'hsl(' + h + ', 55%, 50%)';
+  }
+
+  // ---------- storage ----------
+  function loadTiles() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { /* storage unavailable */ }
+    if (raw === null) {
+      var seeded = DEFAULT_TILES.map(function (t) { return { id: uid(), name: t.name, url: t.url }; });
+      saveTiles(seeded);
+      return seeded;
+    }
+    try {
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) throw new Error('not an array');
+      return parsed.filter(function (t) {
+        return t && typeof t.name === 'string' && typeof t.url === 'string' && safeHttpUrl(t.url);
+      }).map(function (t) { return { id: typeof t.id === 'string' ? t.id : uid(), name: t.name, url: t.url }; });
+    } catch (e) {
+      console.warn('Dashboard: stored tiles were corrupt; backing up and starting empty.', e);
+      try { localStorage.setItem(STORAGE_KEY + '.corrupt-backup', raw); } catch (e2) {}
+      saveTiles([]);
+      return [];
+    }
+  }
+  function saveTiles(list) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+    catch (e) { console.warn('Dashboard: could not save tiles', e); }
+  }
+
+  var tiles = loadTiles();
+
+  // ---------- dashboard rendering ----------
+  var grid = $('tileGrid');
+  function renderTiles() {
+    grid.replaceChildren();
+    tiles.forEach(function (t) {
+      var domain = domainOf(t.url);
+      var letter = el('span', { className: 'letter', text: (t.name.trim()[0] || '?').toUpperCase(), 'aria-hidden': 'true' });
+      letter.style.background = colorFor(domain || t.name);
+      var icon = el('span', { className: 'tile-icon', 'aria-hidden': 'true' });
+      if (domain) {
+        var img = el('img', { alt: '', loading: 'lazy', width: 32, height: 32,
+          src: 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=64' });
+        img.addEventListener('error', function () { icon.replaceChildren(letter); });
+        icon.appendChild(img);
+      } else {
+        icon.appendChild(letter);
+      }
+      var link = el('a', { className: 'tile-link', href: t.url, rel: 'noopener noreferrer', 'aria-label': t.name + ' (' + domain + ')' }, [
+        icon,
+        el('span', { className: 'tile-name', text: t.name }),
+        el('span', { className: 'tile-domain', text: domain })
+      ]);
+      var actions = el('div', { className: 'tile-actions' }, [
+        el('button', { type: 'button', className: 'icon-btn', title: 'Edit', 'aria-label': 'Edit ' + t.name, text: '✎',
+          onclick: function () { openTileDialog(t); } }),
+        el('button', { type: 'button', className: 'icon-btn danger', title: 'Remove', 'aria-label': 'Remove ' + t.name, text: '✕',
+          onclick: function () { confirmRemove(t); } })
+      ]);
+      grid.appendChild(el('li', { className: 'tile' }, [link, actions]));
+    });
+    grid.appendChild(el('li', { className: 'tile' }, [
+      el('button', { type: 'button', className: 'tile-add', 'aria-label': 'Add shortcut', onclick: function () { openTileDialog(null); } }, [
+        el('span', { className: 'plus', 'aria-hidden': 'true', text: '+' }),
+        el('span', { text: 'Add shortcut' })
+      ])
+    ]));
+  }
+
+  // ---------- add / edit modal ----------
+  var tileDialog = $('tileDialog'), tileForm = $('tileForm');
+  var nameInput = $('tileName'), urlInput = $('tileUrl');
+  var nameError = $('nameError'), urlError = $('urlError');
+  var editingId = null;
+
+  function openTileDialog(tile) {
+    editingId = tile ? tile.id : null;
+    $('tileDialogTitle').textContent = tile ? 'Edit shortcut' : 'Add shortcut';
+    nameInput.value = tile ? tile.name : '';
+    urlInput.value = tile ? tile.url : '';
+    nameError.textContent = ''; urlError.textContent = '';
+    nameInput.removeAttribute('aria-invalid'); urlInput.removeAttribute('aria-invalid');
+    tileDialog.showModal();
+    nameInput.focus();
+  }
+  tileForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = nameInput.value.trim();
+    var url = normalizeUserUrl(urlInput.value);
+    var ok = true;
+    nameError.textContent = ''; urlError.textContent = '';
+    if (!name) { nameError.textContent = 'Please enter a name.'; nameInput.setAttribute('aria-invalid', 'true'); ok = false; }
+    else nameInput.removeAttribute('aria-invalid');
+    if (!url) { urlError.textContent = 'Enter a valid web address, e.g. example.com'; urlInput.setAttribute('aria-invalid', 'true'); ok = false; }
+    else urlInput.removeAttribute('aria-invalid');
+    if (!ok) { (name ? urlInput : nameInput).focus(); return; }
+    if (editingId) {
+      tiles = tiles.map(function (t) { return t.id === editingId ? { id: t.id, name: name, url: url } : t; });
+    } else {
+      tiles.push({ id: uid(), name: name, url: url });
+    }
+    saveTiles(tiles);
+    renderTiles();
+    tileDialog.close();
+  });
+  $('tileCancel').addEventListener('click', function () { tileDialog.close(); });
+
+  // ---------- delete confirm ----------
+  var confirmDialog = $('confirmDialog'), pendingDelete = null;
+  function confirmRemove(tile) {
+    pendingDelete = tile.id;
+    $('confirmText').textContent = 'Remove “' + tile.name + '” from your dashboard?';
+    confirmDialog.showModal();
+    $('confirmCancel').focus();
+  }
+  $('confirmCancel').addEventListener('click', function () { pendingDelete = null; confirmDialog.close(); });
+  $('confirmOk').addEventListener('click', function () {
+    if (pendingDelete) {
+      tiles = tiles.filter(function (t) { return t.id !== pendingDelete; });
+      saveTiles(tiles); renderTiles();
+    }
+    pendingDelete = null; confirmDialog.close();
+  });
+
+  // ---------- views ----------
+  var dashboardView = $('dashboardView'), resultsView = $('resultsView');
+  var homeBtn = $('homeBtn'), searchInput = $('searchInput'), searchForm = $('searchForm');
+  var resultsPanel = $('resultsPanel');
+
+  function showDashboard() {
+    cancelPending();
+    resultsView.hidden = true;
+    dashboardView.hidden = false;
+    homeBtn.setAttribute('aria-pressed', 'true');
+    searchInput.value = '';
+    resultsPanel.replaceChildren();
+    document.title = 'My Dashboard';
+    window.scrollTo(0, 0);
+  }
+  function showResults() {
+    dashboardView.hidden = true;
+    resultsView.hidden = false;
+    homeBtn.setAttribute('aria-pressed', 'false');
+    window.scrollTo(0, 0);
+  }
+  homeBtn.addEventListener('click', showDashboard);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (tileDialog.open || confirmDialog.open) return; // dialogs handle their own Escape
+    if (!resultsView.hidden) { e.preventDefault(); showDashboard(); }
+  });
+  searchForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = searchInput.value.trim();
+    if (!q) { searchInput.focus(); return; }
+    search(q);
+  });
+
+  // ---------- DuckDuckGo JSONP ----------
+  var pending = null, seq = 0;
+  function cancelPending() {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    var name = pending.cb;
+    window[name] = function () {}; // swallow late response
+    if (pending.script.parentNode) pending.script.parentNode.removeChild(pending.script);
+    pending = null;
+  }
+  function ddgJsonp(query, onSuccess, onError) {
+    cancelPending();
+    var cb = '__ddgCb' + (++seq) + '_' + Date.now();
+    var script = document.createElement('script');
+    var done = false;
+    function cleanup() {
+      done = true;
+      if (pending) clearTimeout(pending.timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      // Leave a no-op behind so a late JSONP response (after timeout/cancel) doesn't throw.
+      window[cb] = function () {};
+      pending = null;
+    }
+    window[cb] = function (data) { if (done) return; cleanup(); onSuccess(data); };
+    script.onerror = function () { if (done) return; cleanup(); onError(new Error('Network error')); };
+    script.src = DDG_ENDPOINT + '?q=' + encodeURIComponent(query) +
+      '&format=json&no_html=1&no_redirect=1&skip_disambig=0&t=personal-dashboard&callback=' + cb;
+    script.async = true;
+    var timer = setTimeout(function () { if (done) return; cleanup(); onError(new Error('Timed out')); }, DDG_TIMEOUT_MS);
+    pending = { cb: cb, script: script, timer: timer };
+    document.head.appendChild(script);
+  }
+
+  function ddgWebLink(q) {
+    return el('a', { href: 'https://duckduckgo.com/?q=' + encodeURIComponent(q), target: '_self', rel: 'noopener noreferrer',
+      text: 'Search “' + q + '” on duckduckgo.com' });
+  }
+
+  function search(q) {
+    showResults();
+    $('resultsTitle').textContent = q;
+    $('resultsSub').textContent = 'DuckDuckGo instant answers';
+    document.title = q + ' – My Dashboard';
+    resultsPanel.replaceChildren(el('div', { className: 'state', role: 'status' }, [
+      el('div', { className: 'spinner', 'aria-hidden': 'true' }), el('p', { text: 'Searching…' })
+    ]));
+    ddgJsonp(q, function (data) { renderResults(q, data); }, function (err) {
+      resultsPanel.replaceChildren(el('div', { className: 'card state' }, [
+        el('p', { className: 'error', text: 'Couldn’t load results (' + err.message + '). Check your connection and try again.' }),
+        el('p', null, [ddgWebLink(q)])
+      ]));
+    });
+  }
+
+  function flattenTopics(list, out, group) {
+    (list || []).forEach(function (t) {
+      if (!t) return;
+      if (Array.isArray(t.Topics)) flattenTopics(t.Topics, out, t.Name || group);
+      else if (t.Text || t.FirstURL) out.push({ text: t.Text || '', url: t.FirstURL || '', group: group || '' });
+    });
+    return out;
+  }
+
+  function resultItem(item) {
+    var url = safeHttpUrl(item.url);
+    var text = item.text || url || '';
+    // DDG Text usually begins with the title; split a short title off where possible.
+    var title = text, desc = '';
+    var m = text.match(/^(.{2,80}?)\s[-–—]\s(.+)$/);
+    if (m) { title = m[1]; desc = m[2]; }
+    var children = [];
+    children.push(url ? el('a', { href: url, target: '_self', rel: 'noopener noreferrer', text: title }) : el('strong', { text: title }));
+    if (url) children.push(el('div', { className: 'url', text: url }));
+    if (desc) children.push(el('p', { text: desc }));
+    return el('li', { className: 'result-item' }, children);
+  }
+
+  function renderResults(q, d) {
+    d = d || {};
+    var cards = [];
+
+    if (d.Answer) {
+      cards.push(el('div', { className: 'card' }, [
+        el('h3', { text: 'Answer' }), el('p', { text: String(d.Answer) })
+      ]));
+    }
+
+    if (d.AbstractText || d.Heading && (d.AbstractURL || d.Image)) {
+      var img = null, imgSrc = d.Image ? safeHttpUrl(d.Image) : null;
+      if (imgSrc) {
+        img = el('img', { src: imgSrc, alt: d.Heading ? String(d.Heading) : '', loading: 'lazy' });
+        img.addEventListener('error', function () { img.remove(); });
+      }
+      var absUrl = safeHttpUrl(d.AbstractURL);
+      var body = el('div', null, [
+        d.Heading ? el('h2', { text: String(d.Heading) }) : null,
+        d.AbstractText ? el('p', { text: String(d.AbstractText) }) : null,
+        absUrl ? el('div', { className: 'source' }, [
+          'Source: ', el('a', { href: absUrl, target: '_self', rel: 'noopener noreferrer', text: d.AbstractSource ? String(d.AbstractSource) : absUrl })
+        ]) : null
+      ]);
+      cards.push(el('div', { className: 'card abstract' }, [img, body]));
+    }
+
+    if (d.Definition) {
+      var defUrl = safeHttpUrl(d.DefinitionURL);
+      cards.push(el('div', { className: 'card' }, [
+        el('h3', { text: 'Definition' }), el('p', { text: String(d.Definition) }),
+        defUrl ? el('div', { className: 'source' }, ['Source: ',
+          el('a', { href: defUrl, target: '_self', rel: 'noopener noreferrer', text: d.DefinitionSource ? String(d.DefinitionSource) : defUrl })]) : null
+      ]));
+    }
+
+    var results = flattenTopics(d.Results, [], '');
+    if (results.length) {
+      cards.push(el('div', { className: 'card' }, [
+        el('h3', { text: 'Results' }), el('ul', { className: 'result-list' }, results.map(resultItem))
+      ]));
+    }
+
+    var related = flattenTopics(d.RelatedTopics, [], '');
+    if (related.length) {
+      var section = el('div', { className: 'card' }, [el('h3', { text: 'Related topics' })]);
+      var currentGroup = null, list = null;
+      related.forEach(function (r) {
+        if (list === null || r.group !== currentGroup) {
+          currentGroup = r.group;
+          if (r.group) section.appendChild(el('div', { className: 'group-title', text: r.group }));
+          list = el('ul', { className: 'result-list' });
+          section.appendChild(list);
+        }
+        list.appendChild(resultItem(r));
+      });
+      cards.push(section);
+    }
+
+    if (!cards.length) {
+      resultsPanel.replaceChildren(el('div', { className: 'card state' }, [
+        el('p', { text: 'No instant answer found for “' + q + '”.' }),
+        el('p', null, [ddgWebLink(q)])
+      ]));
+      return;
+    }
+    cards.push(el('p', { className: 'source', style: 'text-align:center' }, ['Instant answers only. ', ddgWebLink(q)]));
+    resultsPanel.replaceChildren.apply(resultsPanel, cards);
+  }
+
+  // ---------- init ----------
+  $('today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  renderTiles();
+})();
+</script>
+</body>
+</html>
